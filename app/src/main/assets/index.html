@@ -1,0 +1,375 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>:root{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>BESS Sizing Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: control panel (inputs) beside a results column; stacks to one column on phones */
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --sunk:#E3E8ED; --ink:#15202B; --muted:#5B6776; --line:#CFD7DF;
+  --accent:#C96E00; --accent-soft:#F6E3C8; --cell:#2F6F8F; --cell-dim:#C9D6DF;
+  --ok:#237A4B; --warn:#A86200; --bad:#B3261E;
+  --f-display:"Chakra Petch", "Arial Narrow", system-ui, sans-serif;
+  --f-body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E141A; --surface:#17212B; --sunk:#111A22; --ink:#E6ECF1; --muted:#93A1B0; --line:#2A3642;
+  --accent:#F2A33A; --accent-soft:#3A2A14; --cell:#5AA9CF; --cell-dim:#26343F;
+  --ok:#5CC98C; --warn:#F2B25A; --bad:#F2837A; color-scheme:dark;}}
+:root[data-theme="dark"]{
+  --bg:#0E141A; --surface:#17212B; --sunk:#111A22; --ink:#E6ECF1; --muted:#93A1B0; --line:#2A3642;
+  --accent:#F2A33A; --accent-soft:#3A2A14; --cell:#5AA9CF; --cell-dim:#26343F;
+  --ok:#5CC98C; --warn:#F2B25A; --bad:#F2837A; color-scheme:dark;}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5}
+.wrap{max-width:1120px;margin:0 auto;padding:20px 16px 40px}
+header{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px 20px;margin-bottom:18px}
+h1{font-family:var(--f-display);font-weight:700;font-size:clamp(24px,5vw,34px);letter-spacing:.01em;margin:0;text-wrap:balance}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:0;font-size:14px}
+.grid{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:18px}
+.label{font-family:var(--f-display);font-size:12px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+.inputs{display:flex;flex-direction:column;gap:16px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field > label, .field > .fl{font-size:13px;font-weight:500;color:var(--ink);display:flex;justify-content:space-between;gap:8px}
+.field small{color:var(--muted);font-weight:400}
+.big{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:8px;background:var(--sunk);overflow:hidden}
+.big input{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font-family:var(--f-mono);font-size:24px;font-weight:500;padding:8px 12px;font-variant-numeric:tabular-nums}
+.big input:focus{outline:none}
+.big:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.unit{display:flex;align-items:center;padding:0 12px;font-family:var(--f-mono);color:var(--muted);font-size:14px}
+.seg{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:3px;gap:3px}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);font:500 13px var(--f-body);padding:7px 6px;border-radius:6px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg button:focus-visible, .chips button:focus-visible, select:focus-visible, input:focus-visible, .reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{border:1px solid var(--line);background:transparent;color:var(--ink);font:500 12px var(--f-mono);padding:4px 9px;border-radius:999px;cursor:pointer}
+.chips button:hover{border-color:var(--accent);color:var(--accent)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+select, .sm{width:100%;border:1px solid var(--line);background:var(--sunk);color:var(--ink);font:500 14px var(--f-mono);padding:8px 10px;border-radius:8px;min-width:0}
+details{border-top:1px solid var(--line);padding-top:12px}
+summary{cursor:pointer;font-family:var(--f-display);font-weight:600;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+details .inputs{margin-top:14px}
+.reset{align-self:flex-start;border:1px solid var(--line);background:transparent;color:var(--muted);font:500 13px var(--f-body);padding:6px 12px;border-radius:8px;cursor:pointer}
+
+.results{display:flex;flex-direction:column;gap:18px;min-width:0}
+.hero{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center}
+@media (max-width:520px){.hero{grid-template-columns:minmax(0,1fr)}}
+.hero .num{font-family:var(--f-display);font-weight:700;font-size:clamp(40px,9vw,64px);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.hero .num small{font-size:.4em;color:var(--muted);font-weight:600;margin-left:6px}
+.hero p{margin:6px 0 0;color:var(--muted);font-size:14px}
+.gauge{width:170px;max-width:100%}
+.gauge .cap{fill:var(--line)}
+.gauge .shell{fill:none;stroke:var(--ink);stroke-width:3}
+.gauge .fill{fill:var(--accent);transition:height .4s ease, y .4s ease}
+.gauge text{fill:var(--ink);font-family:var(--f-mono);font-size:13px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+@media (max-width:640px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);padding:14px}
+.kpi .k{font-size:12px;color:var(--muted)}
+.kpi .v{font-family:var(--f-mono);font-size:20px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:2px;overflow-wrap:anywhere}
+.kpi .v small{font-size:12px;color:var(--muted);margin-left:3px}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px}
+@media (max-width:980px){.two{grid-template-columns:minmax(0,1fr)}}
+table{width:100%;border-collapse:collapse;font-size:14px}
+td{padding:7px 0;border-bottom:1px dashed var(--line);vertical-align:top}
+td:last-child{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap;padding-left:10px}
+tr.tot td{border-bottom:0;font-weight:600;padding-top:10px}
+tr.tot td:last-child{color:var(--accent)}
+.op{color:var(--muted);font-family:var(--f-mono);font-size:12px;margin-right:6px}
+.cells{display:grid;gap:3px;margin-top:4px}
+.cells i{display:block;aspect-ratio:1.6/1;border-radius:2px;background:var(--cell)}
+.cells i.x{background:var(--cell-dim)}
+.cellnote{font-size:13px;color:var(--muted);margin:10px 0 0}
+.flags{display:flex;flex-direction:column;gap:8px}
+.flag{display:flex;gap:10px;align-items:flex-start;font-size:14px;padding:10px 12px;border-radius:8px;background:var(--sunk)}
+.flag b{flex:none;font-family:var(--f-mono);font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;padding:2px 7px;border-radius:4px;border:1px solid currentColor;margin-top:1px}
+.flag.ok b{color:var(--ok)} .flag.warn b{color:var(--warn)} .flag.bad b{color:var(--bad)}
+.chart{width:100%;height:auto;display:block}
+.chart .ax{stroke:var(--line)} .chart .t{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
+.chart .curve{fill:none;stroke:var(--cell);stroke-width:2.5}
+.chart .area{fill:var(--cell);opacity:.12}
+.chart .tgt{stroke:var(--accent);stroke-dasharray:4 4;stroke-width:1.5}
+.chart .dot{fill:var(--accent);stroke:var(--surface);stroke-width:2}
+.chart .dl{fill:var(--ink);font-family:var(--f-mono);font-size:12px;font-weight:500}
+.foot{color:var(--muted);font-size:12.5px;margin-top:18px;max-width:75ch}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head><body>
+
+
+<div class="wrap">
+  <header>
+    <h1>BESS <span>Sizing</span> Calculator</h1>
+    <p class="sub">Enter load and backup time. Battery, modules and inverter size update live.</p>
+  </header>
+
+  <div class="grid">
+    <!-- INPUTS -->
+    <section class="panel" aria-label="Inputs">
+      <p class="label">Load &amp; backup</p>
+      <div class="inputs">
+        <div class="field">
+          <div class="fl">Load <small id="loadHint">active power</small></div>
+          <div class="seg" role="group" aria-label="Load unit">
+            <button type="button" id="uKW" aria-pressed="true">kW</button>
+            <button type="button" id="uKVA" aria-pressed="false">kVA</button>
+            <button type="button" id="uA" aria-pressed="false">Amps</button>
+          </div>
+          <div class="big"><input id="load" type="number" inputmode="decimal" min="0" step="any" value="50" aria-label="Load value"><span class="unit" id="loadUnit">kW</span></div>
+          <div class="row2" id="pfRow" hidden>
+            <div class="field"><label for="pf">Power factor</label><input class="sm" id="pf" type="number" step="0.01" min="0.5" max="1" value="0.9"></div>
+            <div class="field" id="phaseWrap" hidden><label for="phase">Supply</label>
+              <select id="phase"><option value="3">3-ph 415 V</option><option value="1">1-ph 240 V</option><option value="dc48">DC −48 V</option></select></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="fl">Backup time</div>
+          <div class="big"><input id="hrs" type="number" inputmode="decimal" min="0" step="any" value="4" aria-label="Backup hours"><span class="unit">hours</span></div>
+          <div class="chips" id="hrChips">
+            <button type="button" data-h="0.25">15 min</button><button type="button" data-h="0.5">30 min</button><button type="button" data-h="1">1 h</button><button type="button" data-h="2">2 h</button><button type="button" data-h="4">4 h</button><button type="button" data-h="8">8 h</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="fl">Battery chemistry</div>
+          <div class="seg" role="group" aria-label="Chemistry">
+            <button type="button" id="cLFP" aria-pressed="true">Lithium (LFP)</button>
+            <button type="button" id="cVRLA" aria-pressed="false">Lead-acid (VRLA)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="mod">Battery module</label>
+          <select id="mod"></select>
+          <div class="row2" id="customMod" hidden>
+            <div class="field"><label for="mV">Module V</label><input class="sm" id="mV" type="number" step="any" value="51.2"></div>
+            <div class="field"><label for="mAh">Module Ah</label><input class="sm" id="mAh" type="number" step="any" value="100"></div>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="sysV">DC system voltage</label>
+          <select id="sysV"></select>
+        </div>
+
+        <details>
+          <summary>Design factors</summary>
+          <div class="inputs">
+            <div class="field"><label for="dod">Depth of discharge <small id="dodV"></small></label><input id="dod" type="range" min="30" max="100" step="5"></div>
+            <div class="field"><label for="eff">Inverter / PCS efficiency <small id="effV"></small></label><input id="eff" type="range" min="80" max="99" step="1" value="95"></div>
+            <div class="field"><label for="eol">End-of-life capacity <small id="eolV"></small></label><input id="eol" type="range" min="60" max="100" step="5" value="80"></div>
+            <div class="field"><label for="temp">Ambient temperature <small id="tempV"></small></label><input id="temp" type="range" min="15" max="50" step="5" value="35"></div>
+            <div class="field"><label for="mar">Design margin <small id="marV"></small></label><input id="mar" type="range" min="0" max="30" step="5" value="10"></div>
+            <button type="button" class="reset" id="reset">Reset to defaults</button>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <!-- RESULTS -->
+    <div class="results">
+      <section class="panel hero" aria-live="polite">
+        <div>
+          <p class="label">Installed battery capacity</p>
+          <div class="num"><span id="rInst">0</span><small>kWh</small></div>
+          <p id="rLine"></p>
+        </div>
+        <svg class="gauge" viewBox="0 0 170 110" role="img" aria-label="Runtime gauge">
+          <rect class="cap" x="152" y="38" width="10" height="34" rx="2"/>
+          <rect class="shell" x="4" y="14" width="146" height="82" rx="8"/>
+          <clipPath id="gclip"><rect x="10" y="20" width="134" height="70" rx="4"/></clipPath>
+          <rect id="gFill" class="fill" x="10" y="20" width="0" height="70" clip-path="url(#gclip)"/>
+          <text id="gTxt" x="77" y="61" text-anchor="middle"></text>
+        </svg>
+      </section>
+
+      <section class="kpis" aria-label="Key figures">
+        <div class="kpi"><div class="k">Actual runtime</div><div class="v" id="kRun"></div></div>
+        <div class="kpi"><div class="k">Inverter / PCS</div><div class="v" id="kPcs"></div></div>
+        <div class="kpi"><div class="k">Battery Ah @ string V</div><div class="v" id="kAh"></div></div>
+        <div class="kpi"><div class="k">Modules</div><div class="v" id="kMod"></div></div>
+      </section>
+
+      <div class="two">
+        <section class="panel">
+          <p class="label">Calculation</p>
+          <table><tbody id="calc"></tbody></table>
+        </section>
+        <section class="panel">
+          <p class="label">Battery arrangement</p>
+          <div id="arrTitle" style="font-family:var(--f-mono);font-size:14px"></div>
+          <div class="cells" id="cells"></div>
+          <p class="cellnote" id="cellNote"></p>
+        </section>
+      </div>
+
+      <section class="panel">
+        <p class="label">Runtime vs load — installed system</p>
+        <svg class="chart" id="chart" viewBox="0 0 640 260" role="img" aria-label="Runtime versus load chart"></svg>
+      </section>
+
+      <section class="panel">
+        <p class="label">Checks</p>
+        <div class="flags" id="flags"></div>
+      </section>
+    </div>
+  </div>
+  <p class="foot">Budgetary sizing only. Final design should use the manufacturer's discharge tables (constant-power at your end voltage), actual PCS datasheet and site ambient conditions. Temperature factor models capacity/aging allowance for hot sites such as Gulf outdoor installations.</p>
+</div>
+
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const CHEM={
+  LFP:{dod:90, mods:[
+    {n:"51.2 V 100 Ah rack module (5.12 kWh)",v:51.2,ah:100},
+    {n:"51.2 V 280 Ah module (14.3 kWh)",v:51.2,ah:280},
+    {n:"51.2 V 314 Ah module (16.1 kWh)",v:51.2,ah:314},
+    {n:"3.2 V 280 Ah prismatic cell",v:3.2,ah:280},
+    {n:"3.2 V 314 Ah prismatic cell",v:3.2,ah:314},
+    {n:"Custom…",v:null}],
+    sys:[48,51.2,204.8,409.6,512,768,1331.2], sysDef:512, maxC:1, recC:0.5},
+  VRLA:{dod:50, mods:[
+    {n:"12 V 100 Ah block",v:12,ah:100},
+    {n:"12 V 150 Ah block",v:12,ah:150},
+    {n:"12 V 200 Ah block",v:12,ah:200},
+    {n:"2 V 1000 Ah cell",v:2,ah:1000},
+    {n:"Custom…",v:null}],
+    sys:[48,120,240,384,480], sysDef:384, maxC:1, recC:0.25}
+};
+let unit="kW", chem="LFP";
+const DEF={load:50,hrs:4,eff:95,eol:80,temp:35,mar:10};
+
+function tempFactor(t,c){ // extra capacity allowance for heat (aging) or cold (capacity loss)
+  if(c==="LFP"){ if(t<=25) return t<20?1.05:1.0; return 1+ (t-25)*0.006; }
+  if(t<=25) return t<20?1.08:1.0; return 1+(t-25)*0.012;
+}
+function fillChem(){
+  const c=CHEM[chem];
+  $("mod").innerHTML=c.mods.map((m,i)=>`<option value="${i}">${m.n}</option>`).join("");
+  $("sysV").innerHTML=c.sys.map(v=>`<option value="${v}" ${v===c.sysDef?"selected":""}>${v} V${v<=51.2?" (telecom / small UPS)":""}</option>`).join("");
+  $("dod").value=c.dod; $("customMod").hidden=true;
+}
+function setUnit(u){
+  unit=u;["kW","kVA","A"].forEach(x=>$("u"+(x==="A"?"A":x.toUpperCase())).setAttribute("aria-pressed",x===u));
+  $("loadUnit").textContent=u==="A"?"A":u;
+  $("pfRow").hidden=u==="kW"; $("phaseWrap").hidden=u!=="A";
+  $("loadHint").textContent=u==="kW"?"active power":u==="kVA"?"apparent power":"line current";
+  calc();
+}
+function loadKW(){
+  const L=+$("load").value||0, pf=Math.min(1,Math.max(0.5,+$("pf").value||0.9));
+  if(unit==="kW") return {kw:L,kva:L/0.9,pf:null};
+  if(unit==="kVA") return {kw:L*pf,kva:L,pf};
+  const ph=$("phase").value; let kva;
+  if(ph==="3") kva=Math.sqrt(3)*415*L/1000; else if(ph==="1") kva=240*L/1000; else kva=48*L/1000;
+  return {kw: ph==="dc48"? kva : kva*pf, kva, pf: ph==="dc48"?1:pf, dc:ph==="dc48"};
+}
+const f=(n,d=1)=>isFinite(n)?n.toLocaleString("en-US",{maximumFractionDigits:d,minimumFractionDigits:0}):"–";
+function hm(h){ if(!isFinite(h)) return "–"; const m=Math.round(h*60); return m<60? m+" min" : Math.floor(m/60)+" h "+(m%60?String(m%60).padStart(2,"0")+" min":""); }
+const PCS=[5,10,15,20,30,40,50,60,80,100,120,150,160,200,250,300,400,500,630,750,800,1000,1250,1500,1725,2000,2500,3000,3450,4000,5000];
+const stdPCS=k=>PCS.find(p=>p>=k)|| Math.ceil(k/500)*500;
+
+function calc(){
+  const c=CHEM[chem], L=loadKW(), h=Math.max(0,+$("hrs").value||0);
+  const dod=+$("dod").value/100, eff=+$("eff").value/100, eol=+$("eol").value/100, t=+$("temp").value, mar=+$("mar").value/100;
+  $("dodV").textContent=Math.round(dod*100)+" %"; $("effV").textContent=Math.round(eff*100)+" %"; $("eolV").textContent=Math.round(eol*100)+" %";
+  $("tempV").textContent=t+" °C"; $("marV").textContent=Math.round(mar*100)+" %";
+  const mi=+$("mod").value, M=c.mods[mi]; $("customMod").hidden=M.v!==null;
+  const mv=M.v??(+$("mV").value||51.2), mah=M.ah??(+$("mAh").value||100);
+  const sysV=+$("sysV").value, effUse=L.dc?1:eff;
+  const eLoad=L.kw*h, eDC=eLoad/effUse, eDod=eDC/dod, eEol=eDod/eol, tf=tempFactor(t,chem), eReq=eEol*tf*(1+mar);
+  const series=Math.max(1,Math.round(sysV/mv)), strV=series*mv, modKWh=mv*mah/1000;
+  const ahReq=eReq*1000/strV, par=Math.max(1,Math.ceil(ahReq/mah-1e-9)), nMod=series*par, inst=nMod*modKWh;
+  const usableNow=inst*dod*effUse/ (tf) , usableEol=usableNow*eol;
+  const runNow=L.kw>0?usableNow/L.kw:Infinity, runEol=L.kw>0?usableEol/L.kw:Infinity;
+  const pcsK=stdPCS(L.kva*1.25), cRate=inst>0?(L.kw/effUse)/inst:0, dcA=inst>0?(L.kw*1000/effUse)/strV:0;
+
+  $("rInst").textContent=f(inst,inst<100?1:0);
+  $("rLine").textContent=`${f(L.kw,1)} kW for ${hm(h)} → needs ${f(eReq,1)} kWh after design factors`;
+  const ratio=h>0?Math.min(1,runEol/h):0;
+  $("gFill").setAttribute("width",(134*Math.min(1,runNow/Math.max(h,1e-9))).toFixed(1));
+  $("gTxt").textContent=h>0? `${Math.round(Math.min(runNow/h,9.99)*100)}% of target`:"";
+  $("kRun").innerHTML=`${hm(runNow)}<small>new</small>`;
+  $("kPcs").innerHTML=`${f(pcsK,0)}<small>kVA</small>`;
+  $("kAh").innerHTML=`${f(par*mah,0)}<small>Ah @ ${f(strV,1)} V</small>`;
+  $("kMod").innerHTML=`${f(nMod,0)}<small>× ${f(modKWh,2)} kWh</small>`;
+
+  const rows=[
+    ["","Load energy",`${f(L.kw,1)} kW × ${f(h,2)} h`,f(eLoad,1)+" kWh"],
+    ["÷",`Inverter efficiency ${L.dc?"(DC load, n/a)":Math.round(eff*100)+"%"}`,"",f(eDC,1)+" kWh"],
+    ["÷",`Depth of discharge ${Math.round(dod*100)}%`,"",f(eDod,1)+" kWh"],
+    ["÷",`End-of-life capacity ${Math.round(eol*100)}%`,"",f(eEol,1)+" kWh"],
+    ["×",`Temperature ${t} °C (×${tf.toFixed(3)})`,"",f(eEol*tf,1)+" kWh"],
+    ["×",`Design margin ${Math.round(mar*100)}%`,"",f(eReq,1)+" kWh"],
+  ];
+  $("calc").innerHTML=rows.map(r=>`<tr><td><span class="op">${r[0]||"&nbsp;"}</span>${r[1]}${r[2]?` <span style="color:var(--muted)">(${r[2]})</span>`:""}</td><td>${r[3]}</td></tr>`).join("")+
+   `<tr><td><span class="op">=</span>Required ${f(ahReq,0)} Ah @ ${f(strV,1)} V</td><td>${f(eReq,1)} kWh</td></tr>`+
+   `<tr class="tot"><td>Installed (${par} string${par>1?"s":""} × ${series} modules)</td><td>${f(inst,1)} kWh</td></tr>`;
+
+  $("arrTitle").textContent=`${series}S × ${par}P · string ${f(strV,1)} V · ${f(par*mah,0)} Ah`;
+  const cap=240, total=nMod, cols=Math.min(series,24), shown=Math.min(total,cap);
+  let html=""; const shownRows=Math.min(par, Math.ceil(cap/Math.max(series,1)));
+  const perRow=Math.min(series,cols);
+  for(let r=0;r<shownRows;r++) for(let s=0;s<perRow;s++) html+=`<i title="String ${r+1}, module ${s+1}"></i>`;
+  $("cells").style.gridTemplateColumns=`repeat(${perRow},minmax(0,1fr))`;
+  $("cells").innerHTML=html;
+  const hid=[]; if(series>perRow) hid.push(`showing ${perRow} of ${series} modules per string`); if(par>shownRows) hid.push(`${shownRows} of ${par} strings`);
+  $("cellNote").textContent=`Each row is one string of ${series} × ${f(mv,1)} V ${f(mah,0)} Ah in series. DC current at full load ≈ ${f(dcA,0)} A total, ${f(dcA/par,0)} A per string.`+(hid.length?` (Drawing ${hid.join(", ")}.)`:"");
+
+  // flags
+  const fl=[];
+  fl.push(runEol>=h-1e-9?["ok","Pass",`Meets ${hm(h)} backup at end of life (${hm(runEol)}).`]:["bad","Short",`At end of life runtime drops to ${hm(runEol)}. Raise capacity or margin.`]);
+  if(cRate>c.maxC) fl.push(["bad","C-rate",`Discharge ${cRate.toFixed(2)} C exceeds ${c.maxC} C. Short backup at high power: size by power, add strings.`]);
+  else if(cRate>c.recC) fl.push(["warn","C-rate",`Discharge ${cRate.toFixed(2)} C is above the ${c.recC} C sweet spot for ${chem}. ${chem==="VRLA"?"Lead-acid capacity drops at high rates, check the constant-power table.":"Check module continuous current rating."}`]);
+  else fl.push(["ok","C-rate",`Discharge ${cRate.toFixed(2)} C is comfortable for ${chem}.`]);
+  if(dcA/par>(chem==="LFP"?mah:mah*0.4)) fl.push(["warn","Current",`${f(dcA/par,0)} A per string is high for a ${f(mah,0)} Ah module. Consider a higher DC voltage.`]);
+  if(chem==="LFP" && strV<60 && L.kw>15) fl.push(["warn","Voltage",`${f(L.kw,0)} kW on a ${f(strV,1)} V bus means ${f(dcA,0)} A DC. A high-voltage (400–800 V) system is usually better above ~15 kW.`]);
+  if(chem==="VRLA" && t>30) fl.push(["warn","Heat",`VRLA life roughly halves for every 8–10 °C above 25 °C. Plan HVAC for the battery room.`]);
+  if(inst>=1000) fl.push(["ok","Footprint",`About ${Math.ceil(inst/5000)} × 20 ft container${Math.ceil(inst/5000)>1?"s":""} (5 MWh-class LFP), rough guide only.`]);
+  $("flags").innerHTML=fl.map(x=>`<div class="flag ${x[0]}"><b>${x[1]}</b><span>${x[2]}</span></div>`).join("");
+
+  drawChart(usableNow, usableEol, L.kw, h);
+}
+function drawChart(uNow,uEol,kw,h){
+  const W=640,H=260,p={l:52,r:16,t:16,b:40}, iw=W-p.l-p.r, ih=H-p.t-p.b;
+  const xMax=Math.max(kw*2,1), yCap=Math.max(h*2, uNow/(xMax*0.1), 1);
+  const yMax=niceMax(Math.min(uNow/(xMax*0.15), Math.max(h*2.2,1)));
+  const X=v=>p.l+v/xMax*iw, Y=v=>p.t+ih-Math.min(v,yMax)/yMax*ih;
+  const x0=Math.max(uNow/yMax, xMax*0.02);
+  let path="", area="";
+  const N=80; for(let i=0;i<=N;i++){const x=x0+(xMax-x0)*i/N, y=uNow/x; path+=(i?"L":"M")+X(x).toFixed(1)+","+Y(y).toFixed(1);}
+  area=path+`L${X(xMax)},${Y(0)}L${X(x0)},${Y(0)}Z`;
+  let eolPath=""; for(let i=0;i<=N;i++){const x=Math.max(uEol/yMax,xMax*0.02)+(xMax-Math.max(uEol/yMax,xMax*0.02))*i/N; eolPath+=(i?"L":"M")+X(x).toFixed(1)+","+Y(uEol/x).toFixed(1);}
+  let g="";
+  for(let i=0;i<=4;i++){const v=yMax*i/4, y=Y(v); g+=`<line class="ax" x1="${p.l}" x2="${W-p.r}" y1="${y}" y2="${y}"/><text class="t" x="${p.l-8}" y="${y+4}" text-anchor="end">${f(v,v<10?1:0)}h</text>`;}
+  for(let i=0;i<=4;i++){const v=xMax*i/4, x=X(v); g+=`<text class="t" x="${x}" y="${H-p.b+18}" text-anchor="middle">${f(v,v<10?1:0)}</text>`;}
+  g+=`<text class="t" x="${p.l+iw/2}" y="${H-4}" text-anchor="middle">Load (kW)</text>`;
+  const ry=uNow/Math.max(kw,1e-9);
+  $("chart").innerHTML=`${g}<path class="area" d="${area}"/><path class="curve" d="${eolPath}" style="opacity:.45;stroke-dasharray:5 4"/><path class="curve" d="${path}"/>
+   <line class="tgt" x1="${p.l}" x2="${W-p.r}" y1="${Y(h)}" y2="${Y(h)}"/><text class="t" x="${W-p.r}" y="${Y(h)-6}" text-anchor="end" style="fill:var(--accent)">target ${hm(h)}</text>
+   ${kw>0?`<circle class="dot" cx="${X(kw)}" cy="${Y(ry)}" r="6"/><text class="dl" x="${X(kw)+10}" y="${Y(ry)-10}">${f(kw,1)} kW → ${hm(ry)}</text>`:""}
+   <text class="t" x="${p.l+6}" y="${p.t+12}">— new   - - end of life</text>`;
+}
+function niceMax(v){const e=Math.pow(10,Math.floor(Math.log10(v))), m=v/e; return (m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*e;}
+
+$("uKW").onclick=()=>setUnit("kW"); $("uKVA").onclick=()=>setUnit("kVA"); $("uA").onclick=()=>setUnit("A");
+$("cLFP").onclick=()=>{chem="LFP";$("cLFP").setAttribute("aria-pressed",true);$("cVRLA").setAttribute("aria-pressed",false);fillChem();calc();};
+$("cVRLA").onclick=()=>{chem="VRLA";$("cVRLA").setAttribute("aria-pressed",true);$("cLFP").setAttribute("aria-pressed",false);fillChem();calc();};
+$("hrChips").onclick=e=>{const b=e.target.closest("button"); if(b){$("hrs").value=b.dataset.h; calc();}};
+$("reset").onclick=()=>{Object.entries(DEF).forEach(([k,v])=>$(k).value=v); $("dod").value=CHEM[chem].dod; calc();};
+["load","hrs","pf","phase","mod","sysV","dod","eff","eol","temp","mar","mV","mAh"].forEach(id=>$(id).addEventListener("input",calc));
+fillChem(); calc();
+})();
+</script>
+
+</body></html>
