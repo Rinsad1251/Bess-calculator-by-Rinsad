@@ -58,6 +58,18 @@ table.cmp th:first-child{text-align:left;padding-left:0}
 table.cmp td{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;padding-left:10px}
 table.cmp td:first-child{text-align:left;padding-left:0}
 table.cmp tr.sel td{color:var(--accent);font-weight:600}
+table.ss td{white-space:normal}
+table.ss td:first-child{font-family:var(--f-body)}
+table.ss td:first-child b{display:block;font-family:var(--f-mono);font-weight:500}
+table.ss td:first-child span{color:var(--muted);font-size:12px}
+.tag{display:inline-block;font:500 10.5px var(--f-mono);text-transform:uppercase;letter-spacing:.05em;padding:1px 6px;border-radius:4px;border:1px solid currentColor;margin-left:6px;vertical-align:1px}
+.tag.rec{color:var(--accent)} .tag.no{color:var(--bad)}
+tr.no td{opacity:.6}
+.plan{width:100%;min-width:320px;height:auto;display:block;background:var(--sunk);border-radius:8px}
+.plan .site{fill:none;stroke:var(--muted);stroke-dasharray:5 4}
+.plan .row{fill:var(--cell);opacity:.85}
+.plan .shade{fill:var(--cell);opacity:.12}
+.plan text{fill:var(--muted);font-family:var(--f-mono);font-size:11px}
 input[type=range]{width:100%;accent-color:var(--accent)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 select, .sm{width:100%;border:1px solid var(--line);background:var(--sunk);color:var(--ink);font:500 14px var(--f-mono);padding:8px 10px;border-radius:8px;min-width:0}
@@ -184,6 +196,33 @@ tr.tot td:last-child{color:var(--accent)}
             <div class="field"><label for="pr">PV losses factor (PR)</label><input class="sm" id="pr" type="number" step="0.01" min="0.5" max="0.95" value="0.75"></div>
           </div>
           <small style="color:var(--muted)">Daytime load hours: hours the load also runs directly from solar each day. Qatar is typically 5.5–6 peak sun hours. PR 0.75 allows for heat, dust and inverter losses.</small>
+          <details open>
+            <summary>Panel size &amp; installation layout</summary>
+            <div class="inputs">
+              <small id="pSrc" style="color:var(--muted)"></small>
+              <div class="row2">
+                <div class="field"><label for="pL">Panel length (mm)</label><input class="sm" id="pL" type="number" step="1" value="2384"></div>
+                <div class="field"><label for="pW">Panel width (mm)</label><input class="sm" id="pW" type="number" step="1" value="1303"></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="pKg">Panel weight (kg)</label><input class="sm" id="pKg" type="number" step="0.1" value="38.3"></div>
+                <div class="field"><label for="orient">Orientation</label><select id="orient"><option value="P">Portrait</option><option value="L">Landscape</option></select></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="mount">Mounting</label><select id="mount"><option value="rows">Tilted rows (south)</option><option value="flush">Flush / carport</option></select></div>
+                <div class="field"><label for="tilt">Tilt angle (°)</label><input class="sm" id="tilt" type="number" step="1" min="0" max="45" value="20"></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="lat">Site latitude (°N)</label><input class="sm" id="lat" type="number" step="0.1" value="25.3"></div>
+                <div class="field"><label for="setb">Edge setback (m)</label><input class="sm" id="setb" type="number" step="0.1" min="0" value="1"></div>
+              </div>
+              <div class="row2">
+                <div class="field"><label for="perRow">Panels per row <small>0 = auto</small></label><input class="sm" id="perRow" type="number" step="1" min="0" value="0"></div>
+                <div class="field"><label for="gap">Gap between panels (mm)</label><input class="sm" id="gap" type="number" step="5" min="0" value="20"></div>
+              </div>
+              <small style="color:var(--muted)">Row spacing is set so rows don't shade each other between 10:00 and 14:00 on 21 December (lowest winter sun). Doha is about 25.3° N.</small>
+            </div>
+          </details>
         </div>
 
         <details>
@@ -246,8 +285,24 @@ tr.tot td:last-child{color:var(--accent)}
           <div class="kpi"><div class="k">Roof / ground area</div><div class="v" id="sArea"></div></div>
         </section>
         <table><tbody id="sCalc"></tbody></table>
+        <p class="label" style="margin-top:18px">Installation area</p>
+        <section class="kpis" aria-label="Area figures" style="margin-bottom:12px">
+          <div class="kpi"><div class="k">Array footprint</div><div class="v" id="aFoot"></div></div>
+          <div class="kpi"><div class="k">Area incl. setback</div><div class="v" id="aTot"></div></div>
+          <div class="kpi"><div class="k">Layout</div><div class="v" id="aLay"></div></div>
+          <div class="kpi"><div class="k">Panel dead load</div><div class="v" id="aLoad"></div></div>
+        </section>
+        <div style="overflow-x:auto"><svg class="plan" id="plan" viewBox="0 0 640 260" role="img" aria-label="Plan view of the solar array layout"></svg></div>
+        <table style="margin-top:8px"><tbody id="aCalc"></tbody></table>
         <p class="label" style="margin-top:16px">Compare panel options</p>
-        <div style="overflow-x:auto"><table class="cmp"><thead><tr><th>Panel</th><th>Qty</th><th>Array kWp</th><th>Area m²</th></tr></thead><tbody id="sCmp"></tbody></table></div>
+        <div style="overflow-x:auto"><table class="cmp"><thead><tr><th>Panel</th><th>Qty</th><th>Array kWp</th><th>Panel m²</th><th>Site m²</th></tr></thead><tbody id="sCmp"></tbody></table></div>
+      </section>
+
+      <section class="panel">
+        <p class="label">Sacred Sun product selection</p>
+        <p class="cellnote" id="ssIntro" style="margin:0 0 10px"></p>
+        <div style="overflow-x:auto"><table class="cmp ss"><thead><tr><th>Product</th><th>Configuration</th><th>kWh</th><th>Power kW</th><th>Runtime</th></tr></thead><tbody id="ssBody"></tbody></table></div>
+        <p class="cellnote">Models and ratings from Sacred Sun's published range (sacredsun.com). Confirm the final bill of materials and discharge tables with Sacred Sun before quoting.</p>
       </section>
 
       <section class="panel">
@@ -269,13 +324,18 @@ tr.tot td:last-child{color:var(--accent)}
 const $=id=>document.getElementById(id);
 const CHEM={
   LFP:{dod:90, mods:[
-    {n:"51.2 V 100 Ah rack module (5.12 kWh)",v:51.2,ah:100},
-    {n:"51.2 V 280 Ah module (14.3 kWh)",v:51.2,ah:280},
-    {n:"51.2 V 314 Ah module (16.1 kWh)",v:51.2,ah:314},
-    {n:"3.2 V 280 Ah prismatic cell",v:3.2,ah:280},
-    {n:"3.2 V 314 Ah prismatic cell",v:3.2,ah:314},
-    {n:"Custom…",v:null}],
-    sys:[48,51.2,204.8,409.6,512,768,1331.2], sysDef:512, maxC:1, recC:0.5},
+    {g:"Sacred Sun",n:"SHSIFP76100A · 76.8 V 100 Ah HV ESS module (7.68 kWh)",v:76.8,ah:100},
+    {g:"Sacred Sun",n:"SLSIFP51100A · 51.2 V 100 Ah 3U rack (5.12 kWh)",v:51.2,ah:100},
+    {g:"Sacred Sun",n:"SCIFP48100 · 48 V 100 Ah telecom rack (4.8 kWh)",v:48,ah:100},
+    {g:"Sacred Sun",n:"SCIFP48150 · 48 V 150 Ah telecom rack (7.2 kWh)",v:48,ah:150},
+    {g:"Sacred Sun",n:"SCIFP48200 · 48 V 200 Ah telecom rack (9.6 kWh)",v:48,ah:200},
+    {g:"Sacred Sun",n:"HVB Enerstack module · 102.4 V 50 Ah (5.12 kWh)",v:102.4,ah:50},
+    {g:"Generic",n:"51.2 V 280 Ah module (14.3 kWh)",v:51.2,ah:280},
+    {g:"Generic",n:"51.2 V 314 Ah module (16.1 kWh)",v:51.2,ah:314},
+    {g:"Generic",n:"3.2 V 280 Ah prismatic cell",v:3.2,ah:280},
+    {g:"Generic",n:"3.2 V 314 Ah prismatic cell",v:3.2,ah:314},
+    {g:"Generic",n:"Custom…",v:null}],
+    sys:[48,51.2,204.8,409.6,512,614.4,768,844.8], sysDef:768, maxC:1, recC:0.5},
   VRLA:{dod:50, mods:[
     {n:"12 V 100 Ah block",v:12,ah:100},
     {n:"12 V 150 Ah block",v:12,ah:150},
@@ -293,7 +353,8 @@ function tempFactor(t,c){ // extra capacity allowance for heat (aging) or cold (
 }
 function fillChem(){
   const c=CHEM[chem];
-  $("mod").innerHTML=c.mods.map((m,i)=>`<option value="${i}">${m.n}</option>`).join("");
+  const grp={}; c.mods.forEach((m,i)=>{const g=m.g||"Standard";(grp[g]=grp[g]||[]).push(`<option value="${i}">${m.n}</option>`);});
+  $("mod").innerHTML=Object.entries(grp).map(([g,o])=>`<optgroup label="${g}">${o.join("")}</optgroup>`).join("");
   $("sysV").innerHTML=c.sys.map(v=>`<option value="${v}" ${v===c.sysDef?"selected":""}>${v} V${v<=51.2?" (telecom / small UPS)":""}</option>`).join("");
   $("dod").value=c.dod; $("customMod").hidden=true;
 }
@@ -378,26 +439,56 @@ function calc(){
 
   drawChart(usableNow, usableEol, L.kw, h);
   solar(L, eDC, effUse);
+  sacred(L, eReq, eDC, effUse, dod, tf, h);
 }
-const PANEL_AREA={520:2.56,550:2.58,580:2.6,620:2.8,700:3.11,720:3.11,750:3.11};
-const areaOf=w=>PANEL_AREA[w]||w/1000/0.22;
+// Panel data: 720-750 W from LUX STM720-750-72M-T12NS datasheet; others typical market sizes
+const LUX={720:49.4,725:49.6,730:49.8,735:50.0,740:50.2,745:50.4,750:50.6};
+const PANEL={520:{L:2278,W:1134,kg:28},550:{L:2278,W:1134,kg:28},580:{L:2278,W:1134,kg:28},620:{L:2382,W:1134,kg:32},700:{L:2384,W:1303,kg:38}};
+const dimsOf=w=>LUX[w]?{L:2384,W:1303,kg:38.3,src:"lux"}:(PANEL[w]?{...PANEL[w],src:"typ"}:null);
 let panelW=720;
+function fillDims(){ const d=dimsOf(panelW); if(d){$("pL").value=d.L;$("pW").value=d.W;$("pKg").value=d.kg;} }
+function sunShadow(lat,H){ // N-S shadow length behind a row of height H, worst of 10:00/14:00 on 21 Dec
+  const r=Math.PI/180, dec=-23.44*r, ph=lat*r, ha=30*r;
+  const sAlt=Math.sin(ph)*Math.sin(dec)+Math.cos(ph)*Math.cos(dec)*Math.cos(ha);
+  const alt=Math.asin(Math.max(0.05,sAlt));
+  const cosAz=(Math.sin(alt)*Math.sin(ph)-Math.sin(dec))/(Math.cos(alt)*Math.cos(ph)); // azimuth from south
+  return {len:H*Math.max(0,Math.min(1,cosAz))/Math.tan(alt), alt:alt/r};
+}
+function layout(n,P){
+  const port=$("orient").value==="P", mount=$("mount").value, tilt=Math.min(60,Math.max(0,+$("tilt").value||0));
+  const lat=+$("lat").value||25.3, sb=Math.max(0,+$("setb").value||0), gap=Math.max(0,+$("gap").value||0)/1000;
+  const Ls=(port?P.L:P.W)/1000, Wm=(port?P.W:P.L)/1000; // along slope, across row
+  const r=Math.PI/180, D=Ls*Math.cos(tilt*r), H=Ls*Math.sin(tilt*r);
+  const sh=mount==="rows"&&tilt>0?sunShadow(lat,H):{len:0,alt:0};
+  const pitch=mount==="rows"?D+sh.len:D+gap;
+  let per=Math.round(+$("perRow").value||0);
+  if(per<1) per=Math.max(1,Math.round(Math.sqrt(n*pitch/(Wm+gap))));
+  per=Math.min(per,Math.max(1,n));
+  const rows=Math.max(1,Math.ceil(n/per));
+  const rowW=per*Wm+(per-1)*gap, depth=(rows-1)*pitch+D;
+  const foot=rowW*depth, tot=(rowW+2*sb)*(depth+2*sb);
+  return {port,mount,tilt,lat,sb,gap,Ls,Wm,D,H,sh,pitch,per,rows,rowW,depth,foot,tot,gcr:D/pitch,last:n-(rows-1)*per};
+}
 function solar(L,eDC,effUse){
   const custom=panelW==="custom";
   $("pwCustomWrap").hidden=!custom;
   const W=custom?Math.max(50,+$("pwCustom").value||600):panelW;
   document.querySelectorAll("#pwChips button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.w===String(panelW))));
   $("pwV").textContent=f(W,0)+" W selected";
+  const P={L:+$("pL").value||2384,W:+$("pW").value||1303,kg:+$("pKg").value||38};
+  const d0=dimsOf(W), edited=d0&&(d0.L!==P.L||d0.W!==P.W);
+  $("pSrc").textContent=custom||edited?"Using the panel dimensions entered below.":d0.src==="lux"?"Dimensions from the LUX STM720-750-72M-T12NS datasheet: 2384 × 1303 × 33 mm, 38.3 kg.":"Typical dimensions for this wattage class. Enter the datasheet values if different.";
   const psh=Math.max(1,+$("psh").value||5.5), dayH=Math.max(0,+$("dayH").value||0), days=Math.max(1,Math.round(+$("rDays").value||1)), pr=Math.min(0.95,Math.max(0.5,+$("pr").value||0.75));
   const chgEff=chem==="LFP"?0.95:0.85;
   const eRecharge=eDC/chgEff/days, eDay=L.kw*dayH/effUse, eTot=eRecharge+eDay;
   const kwpReq=eTot/(psh*pr);
   const count=w=>Math.max(eTot>0?1:0,Math.ceil(kwpReq*1000/w-1e-9));
-  const n=count(W), kwp=n*W/1000, area=n*areaOf(W);
+  const n=count(W), kwp=n*W/1000, pArea=n*P.L*P.W/1e6;
+  const A=layout(n,P);
   $("sPanels").innerHTML=`${f(n,0)}<small>× ${f(W,0)} W</small>`;
   $("sKwp").innerHTML=`${f(kwp,2)}<small>kWp</small>`;
   $("sDaily").innerHTML=`${f(kwp*psh*pr,1)}<small>kWh/day</small>`;
-  $("sArea").innerHTML=`${f(area,0)}<small>m² panels · ≈${f(area*1.3,0)} m² with spacing</small>`;
+  $("sArea").innerHTML=`${f(A.tot,0)}<small>m² site area</small>`;
   const rows=[
     ["","Battery recharge energy",`${f(eDC,1)} kWh ÷ ${Math.round(chgEff*100)}% charge eff.${days>1?` ÷ ${days} days`:""}`,f(eRecharge,1)+" kWh/day"],
     ["+","Daytime load from solar",`${f(L.kw,1)} kW × ${f(dayH,1)} h`,f(eDay,1)+" kWh/day"],
@@ -405,8 +496,81 @@ function solar(L,eDC,effUse){
   ];
   $("sCalc").innerHTML=rows.map(r=>`<tr><td><span class="op">${r[0]||"&nbsp;"}</span>${r[1]} <span style="color:var(--muted)">(${r[2]||"per day"})</span></td><td>${r[3]}</td></tr>`).join("")+
     `<tr class="tot"><td>${f(n,0)} panels × ${f(W,0)} W</td><td>${f(kwp,2)} kWp</td></tr>`;
+
+  $("aFoot").innerHTML=`${f(A.foot,0)}<small>m² (${f(A.rowW,1)} × ${f(A.depth,1)} m)</small>`;
+  $("aTot").innerHTML=`${f(A.tot,0)}<small>m² (${f(A.rowW+2*A.sb,1)} × ${f(A.depth+2*A.sb,1)} m)</small>`;
+  $("aLay").innerHTML=`${A.rows}<small>rows × ${A.per}${A.last<A.per?` (last ${A.last})`:""}</small>`;
+  $("aLoad").innerHTML=`${f(n*P.kg/A.foot,1)}<small>kg/m² · ${f(n*P.kg/1000,1)} t</small>`;
+  const ar=[
+    ["Panel area",`${f(n,0)} × ${f(P.L,0)} × ${f(P.W,0)} mm`,f(pArea,1)+" m²"],
+    ["Panel along slope / across row",A.port?"portrait":"landscape",`${f(A.Ls,3)} / ${f(A.Wm,3)} m`],
+  ];
+  if(A.mount==="rows"&&A.tilt>0){
+    ar.push(["Row depth on ground",`${f(A.Ls,3)} m × cos ${A.tilt}°`,f(A.D,2)+" m"]);
+    ar.push(["Row height",`${f(A.Ls,3)} m × sin ${A.tilt}°`,f(A.H,2)+" m"]);
+    ar.push(["Shadow gap (21 Dec, 10:00–14:00)",`sun ${f(A.sh.alt,1)}° high at ${f(A.lat,1)}° N`,f(A.sh.len,2)+" m"]);
+    ar.push(["Row pitch (front-to-front)",`GCR ${f(A.gcr*100,0)}%`,f(A.pitch,2)+" m"]);
+  } else ar.push(["Mounting","flush / no inter-row shading",f(A.pitch,2)+" m pitch"]);
+  ar.push(["Edge setback",`${f(A.sb,1)} m each side`,f(A.tot-A.foot,0)+" m²"]);
+  if(LUX[W] && !edited){
+    const tmin=5, voc=LUX[W]*(1+0.0024*(25-tmin));
+    ar.push(["String length (LUX datasheet)",`Voc ${LUX[W]} V → ${f(voc,1)} V at ${tmin} °C`,`max ${Math.floor(1500/voc)} @1500 V · ${Math.floor(1100/voc)} @1100 V`]);
+  }
+  $("aCalc").innerHTML=ar.map(r=>`<tr><td>${r[0]} <span style="color:var(--muted)">(${r[1]})</span></td><td>${r[2]}</td></tr>`).join("");
+  drawPlan(A);
+
   const opts=[520,550,580,620,700,720,750]; if(custom && !opts.includes(W)) opts.push(W);
-  $("sCmp").innerHTML=opts.sort((a,b)=>a-b).map(w=>{const c=count(w);return `<tr class="${w===W?"sel":""}"><td>${w} W</td><td>${f(c,0)}</td><td>${f(c*w/1000,2)}</td><td>${f(c*areaOf(w),0)}</td></tr>`}).join("");
+  $("sCmp").innerHTML=opts.sort((a,b)=>a-b).map(w=>{const c=count(w);const Pd=(w===W)?P:(dimsOf(w)||{L:P.L,W:P.W});const La=layout(c,Pd);return `<tr class="${w===W?"sel":""}"><td>${w} W</td><td>${f(c,0)}</td><td>${f(c*w/1000,2)}</td><td>${f(c*Pd.L*Pd.W/1e6,0)}</td><td>${f(La.tot,0)}</td></tr>`}).join("");
+}
+function drawPlan(A){
+  const W=640,H=260,m=26, sx=(W-2*m)/(A.rowW+2*A.sb), sy=(H-2*m)/(A.depth+2*A.sb), s=Math.min(sx,sy);
+  const ox=(W-(A.rowW+2*A.sb)*s)/2, oy=(H-(A.depth+2*A.sb)*s)/2;
+  let g=`<rect class="site" x="${ox}" y="${oy}" width="${(A.rowW+2*A.sb)*s}" height="${(A.depth+2*A.sb)*s}"/>`;
+  const maxRows=Math.min(A.rows,80);
+  for(let i=0;i<maxRows;i++){
+    const y=oy+(A.sb+A.depth-A.D-i*A.pitch)*s; // south at bottom
+    const cnt=i===A.rows-1?A.last:A.per, w=cnt*A.Wm+(cnt-1)*A.gap;
+    g+=`<rect class="row" x="${ox+A.sb*s}" y="${y}" width="${Math.max(1,w*s)}" height="${Math.max(1,A.D*s)}"/>`;
+    if(A.sh.len>0 && i<A.rows-1) g+=`<rect class="shade" x="${ox+A.sb*s}" y="${y-A.sh.len*s}" width="${Math.max(1,w*s)}" height="${A.sh.len*s}"/>`;
+  }
+  g+=`<text x="${W/2}" y="${H-6}" text-anchor="middle">${f(A.rowW+2*A.sb,1)} m</text>`;
+  g+=`<text x="10" y="${H/2}" transform="rotate(-90 10 ${H/2})" text-anchor="middle">${f(A.depth+2*A.sb,1)} m</text>`;
+  g+=`<text x="${W-m}" y="${m-8}" text-anchor="end">N ↑ · shading gap shown shaded</text>`;
+  $("plan").innerHTML=g;
+}
+// Sacred Sun lithium range (sacredsun.com)
+const SS={
+  rack:[{m:"SCIFP48100",f:"Telecom Li-ion rack",v:48,ah:100,a:100},{m:"SCIFP48150",f:"Telecom Li-ion rack",v:48,ah:150,a:100},{m:"SCIFP48200",f:"Telecom Li-ion rack",v:48,ah:200,a:100},{m:"SLSIFP51100A",f:"ESS LV 3U rack",v:51.2,ah:100,a:100,maxPar:48}],
+  hvb:[{m:"HVB 10.24",n:2},{m:"HVB 15.36",n:3},{m:"HVB 20.48",n:4},{m:"HVB 25.6",n:5},{m:"HVB 30.72",n:6}],
+  ups:[["SHUIFP19250D",192,50,38.4,15],["SHUIFP38450D",384,50,76.8,15],["SHUIFP48050D",480,50,96,15],["SHUIFP51250D",512,50,102.4,15],["SHUIFP192100D",192,100,76.8,15],["SHUIFP384100D",384,100,153.6,15],["SHUIFP480100D",480,100,192,15],["SHUIFP512100D",512,100,204.8,15],["SHUIFP192100A",192,100,19.2,60],["SHUIFP384100A",384,100,38.4,60],["SHUIFP480100A",480,100,48,60],["SHUIFP512100A",512,100,51.2,60]],
+  cont:[{m:"ESS-20H-1229",kwh:1229,kw:630,sz:"20 ft container"},{m:"ESS-40H-2765",kwh:2765,kw:1250,sz:"40 ft container"}]
+};
+function sacred(L,eReq,eDC,effUse,dod,tf,h){
+  const pDC=L.kw/effUse, out=[];
+  const run=kwh=>L.kw>0?kwh*dod*effUse/tf/L.kw:Infinity;
+  const add=(o)=>{o.ok=o.kwh>=eReq*0.999&&o.kw>=pDC*0.999;out.push(o);};
+  if(chem!=="LFP"){ $("ssIntro").textContent="Switch chemistry to Lithium (LFP) to see matching Sacred Sun lithium products."; $("ssBody").innerHTML=""; return; }
+  // HV ESS clusters
+  { const m=Math.max(2,Math.ceil(eReq/7.68)); let cl=Math.max(Math.ceil(m/11),Math.ceil(pDC/(11*7.68)));
+    let n=Math.max(2,Math.ceil(m/cl)); if(n>11){n=11;} while(cl*n*7.68<eReq-1e-6) cl++;
+    add({f:"HV ESS battery (UL9540A)",m:"SHSIFP76100A",cfg:`${cl} cluster${cl>1?"s":""} × ${n} modules · ${f(n*76.8,1)} V`,kwh:cl*n*7.68,kw:cl*n*7.68*1,q:cl*n}); }
+  // Enerstack single tower
+  if(eReq<=31 && pDC<=37){ const s=SS.hvb.find(x=>x.n*5.12>=eReq && x.n*102.4*0.05>=pDC)||SS.hvb[4];
+    add({f:"Residential HV Enerstack",m:s.m,cfg:`1 tower × ${s.n} modules · ${f(s.n*102.4,1)} V`,kwh:s.n*5.12,kw:s.n*102.4*0.05,q:1}); }
+  // LV racks
+  if(pDC<=150){ SS.rack.forEach(r=>{ const e=r.v*r.ah/1000; let q=Math.max(Math.ceil(eReq/e),Math.ceil(pDC*1000/r.v/r.a));
+    add({f:r.f,m:r.m,cfg:`${q} in parallel · ${r.v} V${r.maxPar&&q>r.maxPar?` (over ${r.maxPar}-unit limit)`:""}`,kwh:q*e,kw:q*r.v*r.a/1000,q,bad:r.maxPar&&q>r.maxPar}); }); }
+  // UPS HV cabinets (short backup)
+  if(h<=2){ ["D","A"].forEach(t=>{ let best=null; SS.ups.filter(u=>u[0].endsWith(t)).forEach(u=>{const e=u[1]*u[2]/1000; const q=Math.max(Math.ceil(eReq/e),Math.ceil(pDC/u[3])); const o={f:`UPS HV cabinet (${u[4]} min rated)`,m:u[0],cfg:`${q} cabinet${q>1?"s":""} · ${u[1]} V ${u[2]} Ah`,kwh:q*e,kw:q*u[3],q}; if(!best||o.kwh<best.kwh) best=o;}); if(best) add(best); }); }
+  // Containers
+  if(eReq>=400){ SS.cont.forEach(c=>{const q=Math.max(Math.ceil(eReq/c.kwh),Math.ceil(L.kva/c.kw)); add({f:`C&I ${c.sz} (768 V)`,m:c.m,cfg:`${q} × ${c.kwh} kWh / ${c.kw} kW`,kwh:q*c.kwh,kw:q*c.kw,q});}); }
+  const okList=out.filter(o=>o.ok&&!o.bad);
+  const pref=eReq>=1000?["C&I"]:h<=0.5&&pDC>=20?["UPS HV"]:eReq>31?["HV ESS"]:["Residential","ESS LV","Telecom"];
+  const byFit=a=>a.slice().sort((x,y)=>x.kwh-y.kwh);
+  const rec=byFit(okList.filter(o=>pref.some(p=>o.f.startsWith(p))))[0]||byFit(okList)[0];
+  out.sort((a,b)=>(b.ok-a.ok)||(a.kwh-b.kwh));
+  $("ssIntro").textContent=`Needs ${f(eReq,1)} kWh nominal and ${f(pDC,1)} kW DC discharge. Options below are sized to meet both; the recommended one suits this size of system best.`;
+  $("ssBody").innerHTML=out.map(o=>`<tr class="${o===rec?"sel":""} ${o.ok&&!o.bad?"":"no"}"><td><b>${o.m}${o===rec?'<span class="tag rec">Recommended</span>':""}${o.ok&&!o.bad?"":'<span class="tag no">Short</span>'}</b><span>${o.f}</span></td><td>${o.cfg}</td><td>${f(o.kwh,1)}</td><td>${f(o.kw,0)}</td><td>${hm(run(o.kwh))}</td></tr>`).join("");
 }
 function drawChart(uNow,uEol,kw,h){
   const W=640,H=260,p={l:52,r:16,t:16,b:40}, iw=W-p.l-p.r, ih=H-p.t-p.b;
@@ -435,8 +599,8 @@ $("cLFP").onclick=()=>{chem="LFP";$("cLFP").setAttribute("aria-pressed",true);$(
 $("cVRLA").onclick=()=>{chem="VRLA";$("cVRLA").setAttribute("aria-pressed",true);$("cLFP").setAttribute("aria-pressed",false);fillChem();calc();};
 $("hrChips").onclick=e=>{const b=e.target.closest("button"); if(b){$("hrs").value=b.dataset.h; calc();}};
 $("reset").onclick=()=>{Object.entries(DEF).forEach(([k,v])=>$(k).value=v); $("dod").value=CHEM[chem].dod; calc();};
-$("pwChips").onclick=e=>{const b=e.target.closest("button"); if(b){panelW=b.dataset.w==="custom"?"custom":+b.dataset.w; calc();}};
-["load","hrs","pf","phase","mod","sysV","dod","eff","eol","temp","mar","mV","mAh","pwCustom","psh","dayH","rDays","pr"].forEach(id=>$(id).addEventListener("input",calc));
+$("pwChips").onclick=e=>{const b=e.target.closest("button"); if(b){panelW=b.dataset.w==="custom"?"custom":+b.dataset.w; fillDims(); calc();}};
+["load","hrs","pf","phase","mod","sysV","dod","eff","eol","temp","mar","mV","mAh","pwCustom","psh","dayH","rDays","pr","pL","pW","pKg","orient","mount","tilt","lat","setb","perRow","gap"].forEach(id=>$(id).addEventListener("input",calc));
 fillChem(); calc();
 })();
 </script>
