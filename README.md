@@ -1,4 +1,4 @@
-# BESS Calculator – Android app
+# Rinsad's BESS Sizing Calculator – Android app
 
 Offline Android app that runs the BESS sizing calculator. The calculator lives in `app/src/main/assets/index.html`.
 
